@@ -10,6 +10,7 @@ export type LevelItem = {
 export type LevelDef = {
   name: string
   time: number
+  /** New gold this stage adds. The number on screen is the running sum through this stage. */
   target: number
   /** Full left-right-left swing, in seconds. */
   period: number
@@ -19,8 +20,8 @@ export type LevelDef = {
 const HANDCRAFTED: LevelDef[] = [
   {
     name: '奶油浅滩',
-    time: 52,
-    target: 1150,
+    time: 50,
+    target: 1280,
     period: 3.45,
     items: [
       { type: 'goldS', x: 0.32, y: 0.2 },
@@ -37,8 +38,8 @@ const HANDCRAFTED: LevelDef[] = [
   },
   {
     name: '蜜桃坡',
-    time: 50,
-    target: 1700,
+    time: 48,
+    target: 1880,
     period: 3.28,
     items: [
       { type: 'goldS', x: 0.26, y: 0.18 },
@@ -57,7 +58,7 @@ const HANDCRAFTED: LevelDef[] = [
   {
     name: '樱花矿道',
     time: 48,
-    target: 1450,
+    target: 1520,
     period: 3.12,
     items: [
       { type: 'goldM', x: 0.5, y: 0.16 },
@@ -75,8 +76,8 @@ const HANDCRAFTED: LevelDef[] = [
   },
   {
     name: '薄荷晶洞',
-    time: 48,
-    target: 1700,
+    time: 46,
+    target: 1860,
     period: 3.0,
     items: [
       { type: 'goldS', x: 0.4, y: 0.16 },
@@ -95,8 +96,8 @@ const HANDCRAFTED: LevelDef[] = [
   },
   {
     name: '薰衣草层',
-    time: 50,
-    target: 1750,
+    time: 48,
+    target: 1920,
     period: 2.9,
     items: [
       { type: 'candy', x: 0.5, y: 0.18 },
@@ -116,8 +117,8 @@ const HANDCRAFTED: LevelDef[] = [
   },
   {
     name: '星星糖巷',
-    time: 48,
-    target: 1900,
+    time: 46,
+    target: 2100,
     period: 2.76,
     items: [
       { type: 'goldM', x: 0.5, y: 0.16 },
@@ -137,9 +138,9 @@ const HANDCRAFTED: LevelDef[] = [
   },
   {
     name: '月光井',
-    time: 52,
-    target: 2900,
-    period: 2.64,
+    time: 50,
+    target: 3150,
+    period: 2.56,
     items: [
       { type: 'goldM', x: 0.5, y: 0.14 },
       { type: 'goldS', x: 0.74, y: 0.18 },
@@ -160,9 +161,9 @@ const HANDCRAFTED: LevelDef[] = [
   },
   {
     name: '玫瑰深窟',
-    time: 54,
-    target: 2800,
-    period: 2.52,
+    time: 50,
+    target: 3050,
+    period: 2.46,
     items: [
       { type: 'goldS', x: 0.5, y: 0.14 },
       { type: 'candy', x: 0.5, y: 0.32 },
@@ -184,9 +185,9 @@ const HANDCRAFTED: LevelDef[] = [
   },
   {
     name: '彩虹心脉',
-    time: 60,
-    target: 3300,
-    period: 2.4,
+    time: 56,
+    target: 3550,
+    period: 2.34,
     items: [
       { type: 'gem', x: 0.5, y: 0.16 },
       { type: 'star', x: 0.18, y: 0.26 },
@@ -207,9 +208,9 @@ const HANDCRAFTED: LevelDef[] = [
   },
   {
     name: '王冠宝库',
-    time: 60,
-    target: 3900,
-    period: 2.32,
+    time: 56,
+    target: 4200,
+    period: 2.26,
     items: [
       { type: 'goldM', x: 0.5, y: 0.12 },
       { type: 'gem', x: 0.28, y: 0.24 },
@@ -234,3 +235,10 @@ const HANDCRAFTED: LevelDef[] = [
 ]
 
 export const LEVELS: LevelDef[] = extendCampaign(HANDCRAFTED)
+
+/** Pass line shown in the HUD: every earlier stage's new gold, plus this one. */
+export function cumulativeTarget(index: number): number {
+  let total = 0
+  for (let i = 0; i <= index && i < LEVELS.length; i++) total += LEVELS[i].target
+  return total
+}

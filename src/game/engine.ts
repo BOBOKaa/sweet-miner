@@ -9,9 +9,9 @@ import {
   paintWorld,
   star4,
 } from './art'
-import { LEVELS } from './levels'
+import { cumulativeTarget, LEVELS } from './levels'
 import { itemPoint, makeScene, maxRope, payout, ropeTip, type Scene } from './physics'
-import { resolveRound } from './round'
+import { resolveRound, stageProgress } from './round'
 import {
   AMP,
   BAG_TABLE,
@@ -40,6 +40,7 @@ export type HudSnapshot = {
   name: string
   timeLeft: number
   score: number
+  progress: number
   target: number
   bombs: number
   phase: Phase
@@ -133,6 +134,7 @@ export class GameEngine {
   private levelIndex = 0
   private items: Runtime[] = []
   private score = 0
+  private carried = 0
   private timeLeft = 60
   private timeMax = 60
   private bombs = 0
@@ -218,7 +220,7 @@ export class GameEngine {
     cancelAnimationFrame(this.raf)
   }
 
-  startLevel(index: number, bombs: number, buffs: Buffs): void {
+  startLevel(index: number, bombs: number, buffs: Buffs, carried = 0): void {
     const level = LEVELS[index]
     this.levelIndex = index
     this.bombs = bombs
@@ -226,6 +228,7 @@ export class GameEngine {
     this.clover = buffs.clover
     this.extraTime = buffs.extraTime
     this.score = 0
+    this.carried = Math.max(0, carried)
     this.timeMax = level.time + buffs.extraTime
     this.timeLeft = this.timeMax
     this.phase = 'swing'
@@ -359,7 +362,7 @@ export class GameEngine {
           level: this.levelIndex + 1,
           name: level.name,
           score: this.score,
-          target: level.target,
+          target: this.goal(),
           timeLeft: Math.max(0, this.timeLeft),
           timeMax: this.timeMax,
           stars: this.clearStars,
@@ -372,7 +375,7 @@ export class GameEngine {
       this.loseTimer -= dt
       if (this.loseTimer <= 0 && !this.loseSent) {
         this.loseSent = true
-        this.hooks.onLose({ score: this.score, target: LEVELS[this.levelIndex].target })
+        this.hooks.onLose({ score: this.progress(), target: this.goal() })
       }
       return
     }
@@ -508,17 +511,18 @@ export class GameEngine {
 
   private maybeFinishLevel(): void {
     if (this.intro > 0) return
-    const level = LEVELS[this.levelIndex]
     const itemsLeft = this.items.reduce((count, item) => count + (item.gone ? 0 : 1), 0)
+    const progress = this.progress()
+    const goal = this.goal()
     const end = resolveRound({
-      score: this.score,
-      target: level.target,
+      score: progress,
+      target: goal,
       timeLeft: this.timeLeft,
       intro: this.intro,
       itemsLeft,
     })
     if (end === 'play') {
-      if (this.score >= level.target) this.markCleared()
+      if (progress >= goal) this.markCleared()
       return
     }
     if (end === 'win') this.beginWin()
@@ -584,6 +588,14 @@ export class GameEngine {
     return best
   }
 
+  private progress(): number {
+    return stageProgress(this.carried, this.score)
+  }
+
+  private goal(): number {
+    return cumulativeTarget(this.levelIndex)
+  }
+
   private heldPoint(item: Runtime): { x: number; y: number } {
     const extra = Math.min(18, item.r * 0.55)
     return ropeTip(this.scene, this.angle, this.length + extra)
@@ -607,7 +619,8 @@ export class GameEngine {
       name: level.name,
       timeLeft: Math.max(0, this.timeLeft),
       score: this.score,
-      target: level.target,
+      progress: this.progress(),
+      target: this.goal(),
       bombs: this.bombs,
       phase: this.phase,
       cleared: this.cleared,

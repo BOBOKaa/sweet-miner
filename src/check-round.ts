@@ -1,7 +1,7 @@
 import { GameEngine, type ClearInfo } from './game/engine'
-import { LEVELS } from './game/levels'
+import { cumulativeTarget, LEVELS } from './game/levels'
 import { blocker, payout, reachOf, type Body, type Scene } from './game/physics'
-import { resolveRound, type RoundEnd, type RoundState } from './game/round'
+import { resolveRound, stageProgress, stillToEarn, type RoundEnd, type RoundState } from './game/round'
 import { emptyBuffs, REST_LEN } from './game/tuning'
 
 const target = 1150
@@ -45,12 +45,23 @@ expect(
   'play',
 )
 
+const afterShop = 1800 - 500
+if (stillToEarn(afterShop, 3000) !== 1700) {
+  throw new Error(`after spending 500, level 2 should still need 1700, got ${stillToEarn(afterShop, 3000)}`)
+}
+if (stageProgress(afterShop, 1699) >= 3000) throw new Error('1699 on top of 1300 savings should not clear')
+if (stageProgress(afterShop, 1700) < 3000) throw new Error('1700 on top of 1300 savings should clear')
+if (cumulativeTarget(1) !== LEVELS[0].target + LEVELS[1].target) {
+  throw new Error('stage 2 goal should be the sum of the first two increments')
+}
+
 type OpenEngine = {
   update(dt: number): void
   intro: number
   timerOn: boolean
   timeLeft: number
   score: number
+  carried: number
   phase: string
   cleared: boolean
   now: number
@@ -165,5 +176,20 @@ failed.open.update(0.034)
 if (failed.open.phase !== 'lose') throw new Error('missing the target did not fail when time ran out')
 step(failed.open, 1)
 if (failed.wins.length || failed.losses.n !== 1) throw new Error('fail path did not stay a retry')
+
+const carriedRun = harness()
+const goal = cumulativeTarget(0)
+carriedRun.open.carried = goal - 80
+carriedRun.open.score = 0
+carriedRun.open.update(0.034)
+if (carriedRun.open.cleared) throw new Error('savings alone cleared a stage that still needs mining')
+carriedRun.open.score = 50
+carriedRun.open.update(0.034)
+if (carriedRun.open.cleared) throw new Error('part of the remaining gold should not clear the stage')
+carriedRun.open.score = 80
+carriedRun.open.update(0.034)
+if (!carriedRun.open.cleared || carriedRun.open.phase !== 'swing' || carriedRun.wins.length) {
+  throw new Error('reaching savings plus this stage should clear without ending the round')
+}
 
 console.log('ROUND OK')

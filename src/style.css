@@ -268,6 +268,7 @@ h3 { margin: 18px 0 8px; font-size: 18px; color: var(--ink); }
   background: linear-gradient(180deg, rgba(255, 246, 250, 0.92), rgba(255, 246, 250, 0.72) 70%, rgba(255, 246, 250, 0));
 }
 .hud-top, .hud-mid { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
+.hud-mid { flex-wrap: wrap; }
 .hud-level { font-size: 12px; color: var(--rose); letter-spacing: 0.08em; }
 .hud-name { font-size: 16px; line-height: 1.1; }
 .hud-time {
@@ -279,7 +280,7 @@ h3 { margin: 18px 0 8px; font-size: 18px; color: var(--ink); }
   padding: 4px 8px;
 }
 .hud-time.danger { color: #e2557d; animation: pulse 0.8s ease infinite; }
-.hud-score { font-size: 20px; }
+.hud-score { font-size: 18px; }
 .hud-score .soft, .hud-money { color: var(--soft); font-size: 13px; }
 .bar {
   margin-top: 6px;

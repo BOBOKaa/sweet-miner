@@ -111,15 +111,15 @@ function blocksAny(bodies: Body[], rock: Body, kinds: ItemType[]): boolean {
 }
 
 function floorTargetFor(index: number): number {
-  return Math.round((4000 + climb(index) * 1700) / 10) * 10
+  return Math.round((4300 + climb(index) * 1900) / 10) * 10
 }
 
 function layout(index: number, salt: number): { items: LevelItem[]; period: number } | null {
   const t = climb(index)
   const rand = mulberry32(0x5e57a1 + index * 997 + salt * 131)
-  const gap = 8 + (1 - t) * 7
-  const period = Math.round((2.46 - t * 0.38) * 100) / 100
-  const quota = Math.round(floorTargetFor(index) / 0.8 / 10) * 10
+  const gap = 8 + (1 - t) * 5
+  const period = Math.round((2.4 - t * 0.42) * 100) / 100
+  const quota = Math.round(floorTargetFor(index) / 0.78 / 10) * 10
   const items: LevelItem[] = []
 
   placeRandom(items, 'goldS', rand, gap, 'high')
@@ -140,7 +140,7 @@ function layout(index: number, salt: number): { items: LevelItem[]; period: numb
   if (!items.some((item) => item.type === 'bag')) placeRandom(items, 'bag', rand, gap, 'deep')
   if (haul(items, period) < quota) return null
 
-  const rockCount = 1 + Math.round(t * 4)
+  const rockCount = 1 + Math.round(t * 5)
   for (let i = 0; i < rockCount; i++) {
     const heavy = rand() < 0.25 + t * 0.55
     const before = items.length
@@ -151,7 +151,7 @@ function layout(index: number, salt: number): { items: LevelItem[]; period: numb
     if (blocksAny(bodies, rock, ['goldS', 'goldM', 'gem', 'goldL', 'star', 'bag', 'clock', 'candy'])) items.pop()
   }
 
-  if (t > 0.28) obstruct(items, gap, rand)
+  if (t > 0.18) obstruct(items, gap, rand)
   if (haul(items, period) < quota) {
     let extra = 0
     while (haul(items, period) < quota && items.length < 18 && extra++ < 4) {
@@ -213,13 +213,13 @@ function tune(items: LevelItem[], period: number, index: number): { time: number
   const t = climb(index)
   const full = simulateLevel({ time: 300, period, items })
   const floorTarget = floorTargetFor(index)
-  const ratioTarget = Math.round((full.score * (0.72 + t * 0.14)) / 10) * 10
-  const cap = Math.floor((full.score * 0.9) / 10) * 10
+  const ratioTarget = Math.round((full.score * (0.76 + t * 0.14)) / 10) * 10
+  const cap = Math.floor((full.score * 0.92) / 10) * 10
   if (cap < floorTarget) return null
   const target = Math.min(cap, Math.max(floorTarget, ratioTarget))
 
-  const spare = 1.62 - t * 0.36
-  let time = Math.max(38, Math.ceil(full.time * spare))
+  const spare = 1.52 - t * 0.26
+  let time = Math.max(36, Math.ceil(full.time * spare))
   let sim = simulateLevel({ time, period, items })
   let guard = 0
   while ((sim.score < target || sim.time > time + 0.01) && guard++ < 8) {

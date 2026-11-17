@@ -354,7 +354,7 @@ function beginLevel(): void {
   writeSave(save)
   requestAnimationFrame(() => {
     measure()
-    engine.startLevel(run.level - 1, run.bombs, run.buffs)
+    engine.startLevel(run.level - 1, run.bombs, run.buffs, run.money)
     engine.start()
     flashBanner(run.level)
   })
@@ -433,7 +433,7 @@ function handleWin(info: ClearInfo): void {
   el.resultKicker.textContent = `第 ${info.level} 关 · ${info.name}`
   el.resultTitle.textContent = '过关啦'
   const bonus = info.bonus > 0 ? `含过关后继续挖到的 ${info.bonus} 金。` : ''
-  el.resultBody.textContent = `本关收获 ${info.score} 金，${bonus}存款现在是 ${purse} 金。`
+  el.resultBody.textContent = `这关新挖到 ${info.score} 金，${bonus}存款现在是 ${purse} 金。花掉的钱，下一关要再挖回来。`
   el.resultStars.innerHTML = starRow(info.stars)
   el.resultPrimary.textContent = '去小铺看看'
   el.resultSecondary.textContent = '回标题'
@@ -447,7 +447,7 @@ function handleLose(info: { score: number; target: number }): void {
   const level = run ? LEVELS[run.level - 1] : undefined
   el.resultKicker.textContent = level ? `第 ${run?.level} 关 · ${level.name}` : '再试一次'
   el.resultTitle.textContent = '差一点点'
-  el.resultBody.textContent = `本关 ${info.score} / 目标 ${info.target}。宝贝还在原地，再挥一次吧。`
+  el.resultBody.textContent = `存款加上这关是 ${info.score} / 目标 ${info.target}。新挖的还没入账，再挥一次吧。`
   el.resultStars.innerHTML = ''
   el.resultPrimary.textContent = '再试一次'
   el.resultSecondary.textContent = '回标题'
@@ -459,9 +459,9 @@ function renderHud(hud: HudSnapshot): void {
   setText(el.hudName, hud.name)
   setText(el.hudTime, formatTime(hud.timeLeft))
   el.hudTime.classList.toggle('danger', hud.timeLeft <= 10 && hud.phase !== 'win')
-  setText(el.hudScore, String(hud.score))
-  if (hud.score !== lastScore) {
-    lastScore = hud.score
+  setText(el.hudScore, String(hud.progress))
+  if (hud.progress !== lastScore) {
+    lastScore = hud.progress
     el.hudScore.classList.remove('score-pop')
     void el.hudScore.offsetWidth
     el.hudScore.classList.add('score-pop')
@@ -470,7 +470,7 @@ function renderHud(hud: HudSnapshot): void {
   const carried = save.run?.money ?? 0
   const pending = hud.cleared && !scoreCommitted ? hud.score : 0
   setText(el.hudMoney, String(carried + pending))
-  el.hudBar.style.width = `${Math.max(0, Math.min(100, (hud.score / Math.max(1, hud.target)) * 100))}%`
+  el.hudBar.style.width = `${Math.max(0, Math.min(100, (hud.progress / Math.max(1, hud.target)) * 100))}%`
   const overtime = hud.cleared && hud.phase !== 'win' && hud.phase !== 'lose'
   el.hudScore.classList.toggle('cleared', hud.cleared)
   el.hudBar.parentElement?.classList.toggle('cleared', hud.cleared)

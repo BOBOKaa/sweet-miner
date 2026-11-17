@@ -61,16 +61,23 @@ export function summarize(): string {
     lines.push('LAYOUT OK')
   }
   let failed = problems.length > 0
+  let cumulative = 0
+  const sims = LEVELS.map((_, index) => simulate(index))
   LEVELS.forEach((level, i) => {
-    const sim = simulate(i)
+    cumulative += level.target
+    const sim = sims[i]
     const timeBad = sim.time > level.time
     const scoreBad = sim.score < level.target
-    if (timeBad || scoreBad) failed = true
-    const flag = timeBad || scoreBad ? 'FAIL' : 'OK'
+    const next = LEVELS[i + 1]
+    const surplus = sim.score - level.target
+    const carryBad = Boolean(next && next.target <= surplus)
+    if (timeBad || scoreBad || carryBad) failed = true
+    const flag = timeBad || scoreBad || carryBad ? 'FAIL' : 'OK'
     lines.push(
-      `${flag} L${i + 1} ${level.name} sim ${sim.score}/${level.target} in ${sim.time.toFixed(1)}s / ${level.time}s (budget after clocks ${sim.budget})`,
+      `${flag} L${i + 1} ${level.name} sim ${sim.score}/need ${level.target} (total ${cumulative}) in ${sim.time.toFixed(1)}s / ${level.time}s (budget after clocks ${sim.budget})`,
     )
-    if (timeBad || scoreBad) lines.push(`  ${sim.steps.join(' | ')}`)
+    if (timeBad || scoreBad || carryBad) lines.push(`  ${sim.steps.join(' | ')}`)
+    if (carryBad) lines.push(`  full clear surplus ${surplus} already covers next need ${next?.target}`)
   })
   if (failed) lines.unshift('BALANCE FAIL')
   else lines.unshift('BALANCE OK')

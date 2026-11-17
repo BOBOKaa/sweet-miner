@@ -1,5 +1,15 @@
 export type RoundEnd = 'play' | 'win' | 'lose'
 
+/** Pass meter: savings already in the wallet, plus gold dug this stage. */
+export function stageProgress(savings: number, earned: number): number {
+  return Math.max(0, savings) + Math.max(0, earned)
+}
+
+/** Gold still to dig before savings plus this stage reach the running goal. */
+export function stillToEarn(savings: number, goal: number): number {
+  return Math.max(0, goal - stageProgress(savings, 0))
+}
+
 export type RoundState = {
   score: number
   target: number
