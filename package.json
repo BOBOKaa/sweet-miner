@@ -1,0 +1,17 @@
+{
+  "name": "sweet-miner",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "balance": "vite-node src/check-balance.ts"
+  },
+  "devDependencies": {
+    "typescript": "~7.0.2",
+    "vite": "^8.3.6",
+    "vite-node": "^6.0.0"
+  }
+}
