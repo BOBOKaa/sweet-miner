@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "balance": "vite-node src/check-balance.ts"
+    "balance": "vite-node src/check-balance.ts",
+    "check": "vite-node src/check-round.ts"
   },
   "devDependencies": {
     "typescript": "~7.0.2",

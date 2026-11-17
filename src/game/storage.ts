@@ -1,4 +1,7 @@
+import { LEVELS } from './levels'
 import { emptyBuffs, type Buffs } from './tuning'
+
+const LEVEL_COUNT = LEVELS.length
 
 const KEY = 'sweet-miner-v1'
 
@@ -22,7 +25,7 @@ export function freshSave(): SaveData {
   return {
     bestLevel: 0,
     bestMoney: 0,
-    stars: Array.from({ length: 10 }, () => 0),
+    stars: Array.from({ length: LEVEL_COUNT }, () => 0),
     mute: false,
     run: null,
   }
@@ -43,10 +46,10 @@ export function loadSave(): SaveData {
     const raw = localStorage.getItem(KEY)
     if (!raw) return freshSave()
     const parsed = JSON.parse(raw) as Partial<SaveData>
-    const stars = Array.isArray(parsed.stars) ? parsed.stars.slice(0, 10) : []
-    while (stars.length < 10) stars.push(0)
+    const stars = Array.isArray(parsed.stars) ? parsed.stars.slice(0, LEVEL_COUNT) : []
+    while (stars.length < LEVEL_COUNT) stars.push(0)
     return {
-      bestLevel: clampNum(parsed.bestLevel, 0, 10),
+      bestLevel: clampNum(parsed.bestLevel, 0, LEVEL_COUNT),
       bestMoney: clampNum(parsed.bestMoney, 0, 999999),
       stars: stars.map((n) => clampNum(n, 0, 3)),
       mute: Boolean(parsed.mute),
@@ -67,7 +70,7 @@ export function writeSave(data: SaveData): void {
 
 function sanitizeRun(run: RunSave | null | undefined): RunSave | null {
   if (!run || typeof run !== 'object') return null
-  const level = clampNum(run.level, 1, 10)
+  const level = clampNum(run.level, 1, LEVEL_COUNT)
   const buffs = run.buffs ?? emptyBuffs()
   return {
     level,

@@ -293,34 +293,74 @@ export function drawRope(ctx: CanvasRenderingContext2D, x1: number, y1: number, 
   }
 }
 
-export function drawClaw(ctx: CanvasRenderingContext2D, open: number): void {
-  const spread = 0.42 + open * 0.72
+/** Fairy wand. `open` is the old claw spread: 1 while swinging, near 0 while holding. */
+export function drawWand(ctx: CanvasRenderingContext2D, open: number, time = 0): void {
+  const grip = 1 - Math.min(1, Math.max(0, open))
+  ctx.save()
   ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  const prong = (dir: number) => {
-    ctx.save()
-    ctx.rotate(spread * dir)
-    ctx.beginPath()
-    ctx.moveTo(0, 6)
-    ctx.quadraticCurveTo(10 * dir, 18, 7 * dir, 30)
-    ctx.quadraticCurveTo(4 * dir, 40, -2 * dir, 36)
-    ctx.strokeStyle = '#F6C453'
-    ctx.lineWidth = 6
-    ctx.stroke()
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)'
-    ctx.lineWidth = 2
-    ctx.stroke()
-    ctx.restore()
-  }
-  prong(-1)
-  prong(1)
 
-  ctx.fillStyle = '#FFF1C9'
-  ellipse(ctx, 0, 4, 8, 8)
+  ctx.strokeStyle = '#F3C48A'
+  ctx.lineWidth = 4.2
+  ctx.beginPath()
+  ctx.moveTo(0, -8)
+  ctx.lineTo(0, 16)
+  ctx.stroke()
+  ctx.strokeStyle = 'rgba(255,255,255,0.92)'
+  ctx.lineWidth = 1.3
+  ctx.beginPath()
+  ctx.moveTo(-0.8, -6)
+  ctx.lineTo(-0.8, 14)
+  ctx.stroke()
+
+  ctx.strokeStyle = '#F2C14E'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(-3.1, 3)
+  ctx.lineTo(3.1, 6)
+  ctx.moveTo(-3.1, 8)
+  ctx.lineTo(3.1, 11)
+  ctx.stroke()
+
+  ctx.fillStyle = '#F7A8C4'
+  ellipse(ctx, -4.4, 0.2, 3.3, 2.1)
   ctx.fill()
-  ctx.fillStyle = '#F6A8C4'
-  heart(ctx, 0, 5, 4.5)
+  ellipse(ctx, 4.4, 0.2, 3.3, 2.1)
   ctx.fill()
+  ctx.fillStyle = '#FFE08A'
+  ellipse(ctx, 0, 0.4, 1.7, 1.7)
+  ctx.fill()
+
+  const scale = 1 + grip * 0.18 + Math.sin(time * 6) * 0.035
+  ctx.translate(0, 24)
+  ctx.scale(scale, scale)
+  ctx.fillStyle = `rgba(255, 226, 170, ${0.28 + grip * 0.4})`
+  ellipse(ctx, 0, 0, 20, 20)
+  ctx.fill()
+  star5(ctx, 0, 0, 14)
+  const glow = ctx.createRadialGradient(-2, -3, 1, 0, 0, 11)
+  glow.addColorStop(0, '#FFFFFF')
+  glow.addColorStop(0.42, '#FFE7A3')
+  glow.addColorStop(1, '#F7A8C4')
+  ctx.fillStyle = glow
+  ctx.fill()
+  sticker(ctx, 1.5)
+  ctx.fillStyle = '#FFFFFF'
+  heart(ctx, 0, 0.8, 3.1 + grip)
+  ctx.fill()
+
+  const sparks: Array<[number, number, number]> = [
+    [-13, -6, 0],
+    [12, -8, 1.3],
+    [7, 10, 2.4],
+    [-8, 9, 3.1],
+  ]
+  sparks.forEach(([x, y, phase], index) => {
+    ctx.globalAlpha = Math.max(0, 0.22 + grip * 0.4 + Math.sin(time * 5 + phase) * 0.22)
+    ctx.fillStyle = index % 2 === 0 ? '#FFFFFF' : '#FFE7A3'
+    star4(ctx, x, y, 2.3 + (index === 0 ? 1 : 0))
+    ctx.fill()
+  })
+  ctx.restore()
 }
 
 export function drawItem(

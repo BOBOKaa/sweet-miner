@@ -1,5 +1,5 @@
 import {
-  drawClaw,
+  drawWand,
   drawGirl,
   drawItem,
   drawMoodSparkles,
@@ -11,6 +11,7 @@ import {
 } from './art'
 import { LEVELS } from './levels'
 import { itemPoint, makeScene, maxRope, payout, ropeTip, type Scene } from './physics'
+import { resolveRound } from './round'
 import {
   AMP,
   BAG_TABLE,
@@ -42,6 +43,7 @@ export type HudSnapshot = {
   target: number
   bombs: number
   phase: Phase
+  cleared: boolean
   holding: ItemType | null
   weight: number
   hint: string
@@ -56,6 +58,8 @@ export type ClearInfo = {
   timeLeft: number
   timeMax: number
   stars: number
+  /** Money collected after the target was already met. */
+  bonus: number
 }
 
 type Runtime = {
@@ -154,6 +158,9 @@ export class GameEngine {
   private loseTimer = 0
   private winSent = false
   private loseSent = false
+  private cleared = false
+  private clearStars = 1
+  private clearScore = 0
   private lastTick = 99
   private shake = 0
   private particles: Particle[] = []
@@ -239,6 +246,9 @@ export class GameEngine {
     this.loseTimer = 0
     this.winSent = false
     this.loseSent = false
+    this.cleared = false
+    this.clearStars = 1
+    this.clearScore = 0
     this.lastTick = Math.ceil(this.timeLeft)
     this.shake = 0
     this.particles = []
@@ -352,7 +362,8 @@ export class GameEngine {
           target: level.target,
           timeLeft: Math.max(0, this.timeLeft),
           timeMax: this.timeMax,
-          stars: starCount(this.timeLeft, this.timeMax),
+          stars: this.clearStars,
+          bonus: Math.max(0, this.score - this.clearScore),
         })
       }
       return
@@ -414,17 +425,14 @@ export class GameEngine {
         this.length = REST_LEN
         if (this.held) this.collect(this.held)
         this.held = null
-        if (this.score >= level.target) this.beginWin()
-        else this.phase = 'swing'
+        this.phase = 'swing'
       }
     }
 
     const openTarget = this.phase === 'retract' && this.held ? 0.04 : 1
     this.claw += (openTarget - this.claw) * Math.min(1, dt * 14)
 
-    if (this.timeLeft <= 0 && this.phase === 'swing' && this.score < level.target && this.intro <= 0) {
-      this.beginLose()
-    }
+    if (this.phase === 'swing') this.maybeFinishLevel()
 
     for (const mote of this.motes) {
       mote.y -= mote.v * dt
@@ -498,7 +506,41 @@ export class GameEngine {
     }
   }
 
+  private maybeFinishLevel(): void {
+    if (this.intro > 0) return
+    const level = LEVELS[this.levelIndex]
+    const itemsLeft = this.items.reduce((count, item) => count + (item.gone ? 0 : 1), 0)
+    const end = resolveRound({
+      score: this.score,
+      target: level.target,
+      timeLeft: this.timeLeft,
+      intro: this.intro,
+      itemsLeft,
+    })
+    if (end === 'play') {
+      if (this.score >= level.target) this.markCleared()
+      return
+    }
+    if (end === 'win') this.beginWin()
+    else this.beginLose()
+  }
+
+  private markCleared(): void {
+    if (this.cleared) return
+    this.cleared = true
+    this.clearStars = starCount(this.timeLeft, this.timeMax)
+    this.clearScore = this.score
+    const spot = ropeTip(this.scene, this.angle, REST_LEN + 36)
+    this.popup(spot.x, spot.y, '过关啦', '#E46B96')
+    this.burst(spot.x, spot.y, ['#F7A8C4', '#F6C453', '#FFFFFF', '#B7E6D4'], 16)
+  }
+
   private beginWin(): void {
+    if (!this.cleared) {
+      this.cleared = true
+      this.clearStars = starCount(this.timeLeft, this.timeMax)
+      this.clearScore = this.score
+    }
     this.phase = 'win'
     this.timerOn = false
     this.winTimer = 0.85
@@ -552,7 +594,7 @@ export class GameEngine {
     const holding = this.held?.type ?? null
     let hint = ''
     if (this.levelIndex === 0 && this.shots === 0 && this.phase === 'swing') {
-      hint = '钩爪在摇摆，点屏幕或爱心发射'
+      hint = '仙女棒在摇摆，点屏幕或爱心发射'
     } else if (this.rockHint > 0 && holding && (holding === 'rockS' || holding === 'rockL')) {
       hint = this.bombs > 0 ? '点左边的小炸弹，把石头松开' : '石头好重，小铺里可以买小炸弹'
     }
@@ -568,6 +610,7 @@ export class GameEngine {
       target: level.target,
       bombs: this.bombs,
       phase: this.phase,
+      cleared: this.cleared,
       holding,
       weight: holding ? STATS[holding].weight : 0,
       hint,
@@ -647,7 +690,7 @@ export class GameEngine {
     ctx.save()
     ctx.translate(tip.x, tip.y)
     ctx.rotate(-this.angle)
-    drawClaw(ctx, this.claw)
+    drawWand(ctx, this.claw, this.now)
     ctx.restore()
 
     if (this.held) {

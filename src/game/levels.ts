@@ -1,3 +1,4 @@
+import { extendCampaign } from './campaign'
 import type { ItemType } from './tuning'
 
 export type LevelItem = {
@@ -15,7 +16,7 @@ export type LevelDef = {
   items: LevelItem[]
 }
 
-export const LEVELS: LevelDef[] = [
+const HANDCRAFTED: LevelDef[] = [
   {
     name: '奶油浅滩',
     time: 52,
@@ -231,3 +232,5 @@ export const LEVELS: LevelDef[] = [
     ],
   },
 ]
+
+export const LEVELS: LevelDef[] = extendCampaign(HANDCRAFTED)
