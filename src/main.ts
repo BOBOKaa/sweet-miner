@@ -45,6 +45,7 @@ const el = {
   hudTarget: byId<HTMLElement>('hud-target'),
   hudMoney: byId<HTMLElement>('hud-money'),
   hudBar: byId<HTMLElement>('hud-bar'),
+  hudClear: byId<HTMLElement>('hud-clear'),
   hudPills: byId<HTMLElement>('hud-pills'),
   banner: byId<HTMLElement>('banner'),
   bannerKicker: byId<HTMLElement>('banner-kicker'),
@@ -83,6 +84,8 @@ let armReset = false
 let toastTimer = 0
 let resultMode: 'win' | 'lose' | null = null
 let lastScore = 0
+let showedClear = false
+let scoreCommitted = false
 
 const engine = new GameEngine(el.canvas, {
   onHud: renderHud,
@@ -220,6 +223,13 @@ function bind(): void {
     if (screen === 'screen-game') measure()
     paintHeroOnce()
   })
+  document.addEventListener('pointerdown', (event) => {
+    unlock()
+    const target = event.target
+    if (!(target instanceof Element) || save.mute) return
+    if (target.closest('#btn-shoot, #btn-bomb, #btn-mute, #buy-bomb, #buy-strength, #buy-clover, #buy-time')) return
+    if (target.closest('button')) sfx.ui()
+  })
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screen === 'screen-game' && !resultMode && el.overlayPause.classList.contains('hidden')) {
       openPause()
@@ -254,14 +264,20 @@ function showStart(): void {
   el.best.textContent =
     save.bestLevel > 0
       ? `最远到达第 ${save.bestLevel} 关 · 单局最多 ${save.bestMoney} 金`
-      : '还没有记录，第一钩就从这里开始'
-  el.progress.innerHTML = save.stars
-    .map((stars, index) => {
-      const mark = stars > 0 ? '★' : ''
+      : '还没有记录，第一下就从这里开始'
+  const groups: string[] = []
+  for (let start = 0; start < save.stars.length; start += 10) {
+    const pips = save.stars.slice(start, start + 10).map((stars, offset) => {
+      const index = start + offset
       const cls = stars > 0 ? 'pip on' : 'pip'
-      return `<i class="${cls}${index + 1 === save.bestLevel ? ' best' : ''}" title="第 ${index + 1} 关">${mark || index + 1}</i>`
+      const best = index + 1 === save.bestLevel ? ' best' : ''
+      return `<i class="${cls}${best}" title="第 ${index + 1} 关"></i>`
     })
-    .join('')
+    groups.push(`<span class="chapter">${pips.join('')}</span>`)
+  }
+  el.progress.innerHTML = groups.join('')
+  const lit = save.stars.filter((count) => count > 0).length
+  el.progress.setAttribute('aria-label', `已点亮 ${lit} / ${save.stars.length} 关`)
   show('screen-start')
 }
 
@@ -329,13 +345,16 @@ function beginLevel(): void {
   const run = save.run
   if (!run) return
   resultMode = null
+  showedClear = false
+  scoreCommitted = false
+  el.hudClear.classList.add('hidden')
   closePause()
   closeResult()
   show('screen-game')
   writeSave(save)
   requestAnimationFrame(() => {
     measure()
-    engine.startLevel(run.level - 1, run.bombs, run.buffs)
+    engine.startLevel(run.level - 1, run.bombs, run.buffs, run.money)
     engine.start()
     flashBanner(run.level)
   })
@@ -364,6 +383,7 @@ function tryShoot(): void {
 
 function openPause(): void {
   engine.setPaused(true)
+  sfx.setMusicPaused(true)
   el.overlayPause.classList.remove('hidden')
 }
 
@@ -375,6 +395,7 @@ function resume(): void {
 function closePause(): void {
   el.overlayPause.classList.add('hidden')
   engine.setPaused(false)
+  sfx.setMusicPaused(false)
 }
 
 function closeResult(): void {
@@ -385,7 +406,10 @@ function closeResult(): void {
 function handleWin(info: ClearInfo): void {
   const run = save.run
   if (!run) return
-  run.money += info.score
+  if (!scoreCommitted) {
+    run.money += info.score
+    scoreCommitted = true
+  }
   save.bestMoney = Math.max(save.bestMoney, run.money)
   save.bestLevel = Math.max(save.bestLevel, info.level)
   save.stars[info.level - 1] = Math.max(save.stars[info.level - 1] ?? 0, info.stars)
@@ -395,10 +419,10 @@ function handleWin(info: ClearInfo): void {
     save.run = null
     writeSave(save)
     leaveGame()
-    el.endingCopy.textContent = `十关都过啦，这一局一共带回 ${purse} 金。`
-    el.endingMoney.textContent = `${purse} 金`
-    const total = save.stars.reduce((sum, n) => sum + n, 0)
-    el.endingStars.innerHTML = `<span class="fine">星星 ${total} / 30</span>`
+  el.endingCopy.textContent = `一百关都过啦，这一局一共带回 ${purse} 金。`
+  el.endingMoney.textContent = `${purse} 金`
+  const total = save.stars.reduce((sum, n) => sum + n, 0)
+  el.endingStars.innerHTML = `<span class="fine">星星 ${total} / ${LEVELS.length * 3}</span>`
     show('screen-ending')
     return
   }
@@ -408,7 +432,8 @@ function handleWin(info: ClearInfo): void {
   resultMode = 'win'
   el.resultKicker.textContent = `第 ${info.level} 关 · ${info.name}`
   el.resultTitle.textContent = '过关啦'
-  el.resultBody.textContent = `本关收获 ${info.score} 金，存款现在是 ${purse} 金。`
+  const bonus = info.bonus > 0 ? `含过关后继续挖到的 ${info.bonus} 金。` : ''
+  el.resultBody.textContent = `这关新挖到 ${info.score} 金，${bonus}存款现在是 ${purse} 金。花掉的钱，下一关要再挖回来。`
   el.resultStars.innerHTML = starRow(info.stars)
   el.resultPrimary.textContent = '去小铺看看'
   el.resultSecondary.textContent = '回标题'
@@ -422,7 +447,7 @@ function handleLose(info: { score: number; target: number }): void {
   const level = run ? LEVELS[run.level - 1] : undefined
   el.resultKicker.textContent = level ? `第 ${run?.level} 关 · ${level.name}` : '再试一次'
   el.resultTitle.textContent = '差一点点'
-  el.resultBody.textContent = `本关 ${info.score} / 目标 ${info.target}。宝贝还在原地，再钩一次吧。`
+  el.resultBody.textContent = `存款加上这关是 ${info.score} / 目标 ${info.target}。新挖的还没入账，再挥一次吧。`
   el.resultStars.innerHTML = ''
   el.resultPrimary.textContent = '再试一次'
   el.resultSecondary.textContent = '回标题'
@@ -434,16 +459,27 @@ function renderHud(hud: HudSnapshot): void {
   setText(el.hudName, hud.name)
   setText(el.hudTime, formatTime(hud.timeLeft))
   el.hudTime.classList.toggle('danger', hud.timeLeft <= 10 && hud.phase !== 'win')
-  setText(el.hudScore, String(hud.score))
-  if (hud.score !== lastScore) {
-    lastScore = hud.score
+  setText(el.hudScore, String(hud.progress))
+  if (hud.progress !== lastScore) {
+    lastScore = hud.progress
     el.hudScore.classList.remove('score-pop')
     void el.hudScore.offsetWidth
     el.hudScore.classList.add('score-pop')
   }
   setText(el.hudTarget, String(hud.target))
-  setText(el.hudMoney, String(save.run?.money ?? 0))
-  el.hudBar.style.width = `${Math.max(0, Math.min(100, (hud.score / Math.max(1, hud.target)) * 100))}%`
+  const carried = save.run?.money ?? 0
+  const pending = hud.cleared && !scoreCommitted ? hud.score : 0
+  setText(el.hudMoney, String(carried + pending))
+  el.hudBar.style.width = `${Math.max(0, Math.min(100, (hud.progress / Math.max(1, hud.target)) * 100))}%`
+  const overtime = hud.cleared && hud.phase !== 'win' && hud.phase !== 'lose'
+  el.hudScore.classList.toggle('cleared', hud.cleared)
+  el.hudBar.parentElement?.classList.toggle('cleared', hud.cleared)
+  el.hudClear.classList.toggle('hidden', !overtime)
+  if (overtime && !showedClear) {
+    showedClear = true
+    flashClear()
+  }
+  if (!hud.cleared) showedClear = false
   el.hudPills.innerHTML = hud.pills.map((pill) => `<span>${pill}</span>`).join('')
   setText(el.bombCount, String(hud.bombs))
   const rock = hud.holding === 'rockS' || hud.holding === 'rockL'
@@ -465,6 +501,14 @@ function shootText(hud: HudSnapshot): string {
   if (hud.phase === 'win') return '好耶'
   if (hud.phase === 'lose') return '哎呀'
   return '发射'
+}
+
+function flashClear(): void {
+  el.bannerKicker.textContent = '目标达成'
+  el.bannerTitle.textContent = '还能继续挖'
+  el.banner.classList.remove('show')
+  void el.banner.offsetWidth
+  el.banner.classList.add('show')
 }
 
 function flashBanner(level: number): void {
@@ -542,7 +586,9 @@ function playSfx(name: SfxName): void {
 }
 
 function toggleMute(): void {
-  save.mute = !save.mute
+  const next = !save.mute
+  if (next) sfx.ui()
+  save.mute = next
   sfx.setMuted(save.mute)
   writeSave(save)
   renderMute()

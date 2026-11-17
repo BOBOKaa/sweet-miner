@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#FFD6E6" />
     <meta
       name="description"
-      content="甜心矿工：一只可爱的小钩爪，把闪闪的金子和钻石带回家里。打开就能玩的黄金矿工小游戏。"
+      content="甜心矿工：一支可爱的仙女棒，把闪闪的金子和钻石带回家里。打开就能玩的黄金矿工小游戏。"
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -33,6 +33,7 @@
             <path d="M4 9h3l4-3v12l-4-3H4z"></path>
             <path class="wave" d="M15 9.5a4 4 0 0 1 0 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
             <path class="wave" d="M17.2 7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+            <path class="slash" d="M6 18 L18 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
           </svg>
         </button>
       </div>
@@ -41,7 +42,7 @@
         <div class="start-inner">
           <p class="eyebrow">今日份闪闪</p>
           <h1 class="title">甜心矿工</h1>
-          <p class="subtitle">轻轻一钩，把发光的小确幸带回家</p>
+          <p class="subtitle">轻轻一挥，把发光的小确幸带回家</p>
           <div class="hero-wrap">
             <canvas id="hero" aria-hidden="true"></canvas>
           </div>
@@ -51,7 +52,7 @@
             <button id="btn-help" class="btn secondary" type="button">玩法说明</button>
           </div>
           <div id="progress-stars" class="progress" aria-label="关卡进度"></div>
-          <p id="start-best" class="fine">还没有记录，第一钩就从这里开始</p>
+          <p id="start-best" class="fine">还没有记录，第一下就从这里开始</p>
           <p class="fine dim">打开就能玩 · 进度记在这台手机里</p>
         </div>
       </section>
@@ -61,10 +62,10 @@
           <p class="eyebrow">一眼就会</p>
           <h2>怎么玩</h2>
           <ol class="steps">
-            <li><span>1</span><p>钩爪会自己左右摇摆。</p></li>
-            <li><span>2</span><p>点屏幕任意处，或按下方爱心，钩爪沿此刻的方向飞出去。</p></li>
+            <li><span>1</span><p>仙女棒会自己左右摇摆。</p></li>
+            <li><span>2</span><p>点屏幕任意处，或按下方爱心，仙女棒沿此刻的方向飞出去。</p></li>
             <li><span>3</span><p>抓到东西会拉回来。越小越轻越快，大石头又重又慢。</p></li>
-            <li><span>4</span><p>时间结束前达到目标，就能过关。然后去小铺买一点助力。</p></li>
+            <li><span>4</span><p>过关目标一直往上加，不会每关从零开始。存款已经算进去，小铺花掉的钱要在下一关重新挖回来。达到目标后，倒计时结束前还可以继续挖，多挖的也算进存款。</p></li>
           </ol>
           <h3>宝贝图鉴</h3>
           <div id="legend" class="legend"></div>
@@ -79,7 +80,7 @@
         <div class="sheet">
           <p class="eyebrow">过关奖励</p>
           <h2>矿工小铺</h2>
-          <p class="subtitle shop-sub">给下一关准备一点甜甜的助力</p>
+          <p class="subtitle shop-sub">花掉的存款，下一关要再挖回来</p>
           <div class="purse">
             <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="#F6C453"></circle><circle cx="16" cy="16" r="8" fill="none" stroke="#FFF6D8" stroke-width="1.6"></circle><path d="M16 9.2l1.5 3.8 4.1.3-3.1 2.6.9 4L16 17.8l-3.4 2.1.9-4-3.1-2.6 4.1-.3z" fill="#FFF8E4"></path></svg>
             <strong id="shop-money">0</strong>
@@ -124,7 +125,7 @@
         <div class="sheet center-sheet">
           <p class="eyebrow">全部点亮</p>
           <h2>宝库被你点亮了</h2>
-          <p id="ending-copy" class="subtitle">十关都过了。</p>
+          <p id="ending-copy" class="subtitle">一百关都过了。</p>
           <div id="ending-stars" class="progress"></div>
           <p id="ending-money" class="big-num">0 金</p>
           <button id="btn-again" class="btn" type="button">再来一局</button>
@@ -148,6 +149,7 @@
               <div class="hud-money">存款 <span id="hud-money">0</span></div>
             </div>
             <div class="bar" aria-hidden="true"><span id="hud-bar"></span></div>
+            <div id="hud-clear" class="clear-chip hidden" role="status">已过关 · 继续挖也会入账</div>
             <div id="hud-pills" class="pills"></div>
           </header>
           <div id="banner" class="banner">
@@ -169,7 +171,7 @@
             <div class="card">
               <p class="eyebrow">歇一会儿</p>
               <h2>先停一下</h2>
-              <p>钩爪和计时都会乖乖等你。</p>
+              <p>仙女棒和计时都会乖乖等你。</p>
               <div class="card-actions">
                 <button id="btn-resume" class="btn" type="button">继续挖</button>
                 <button id="btn-restart" class="btn secondary" type="button">重开本关</button>

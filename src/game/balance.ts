@@ -1,14 +1,6 @@
 import { LEVELS, type LevelItem } from './levels'
-import {
-  blocker,
-  candyHits,
-  clockBonus,
-  makeScene,
-  payout,
-  reachOf,
-  shotSeconds,
-  type Body,
-} from './physics'
+import { makeScene, reachOf, type Body } from './physics'
+import { simulateLevel, type Route } from './route'
 import { STATS } from './tuning'
 
 const scene = makeScene(120)
@@ -52,67 +44,11 @@ function overlaps(): string[] {
   return notes
 }
 
-export type Route = {
-  score: number
-  time: number
-  budget: number
-  steps: string[]
-}
-
-function virtualValue(body: SimBody, items: SimBody[]): number {
-  if (body.type === 'rockS' || body.type === 'rockL') return -1
-  if (body.type === 'clock') return 80
-  if (body.type === 'candy') {
-    let bonus = payout('candy', 0, false)
-    for (const rock of candyHits(scene, body, items, 0)) {
-      const freed = items.some((item) => !item.gone && item !== rock && blocker(scene, item, items, 0) === rock)
-      if (freed) bonus += 220
-      else bonus += 20
-    }
-    return bonus
-  }
-  return payout(body.type, body.rolled, false)
-}
+export type { Route }
 
 export function simulate(levelIndex: number): Route {
   const level = LEVELS[levelIndex]
-  const items = toBodies(level.items)
-  let score = 0
-  let time = 0
-  let budget = level.time
-  const steps: string[] = []
-
-  for (let guard = 0; guard < 40; guard++) {
-    const open = items.filter((item) => !item.gone && !blocker(scene, item, items, 0))
-    let best: { item: SimBody; value: number; cost: number; ratio: number } | null = null
-    for (const item of open) {
-      const value = virtualValue(item, items)
-      if (value < 0) continue
-      const reach = reachOf(scene, item, 0)
-      if (!reach.reachable) continue
-      const cost = shotSeconds(reach.dist, STATS[item.type].weight, level.period, false)
-      const ratio = value / Math.max(0.4, cost)
-      if (!best || ratio > best.ratio) best = { item, value, cost, ratio }
-    }
-    if (!best) break
-    if (time + best.cost > budget + 0.01 && best.item.type !== 'clock') break
-    time += best.cost
-    best.item.gone = true
-    if (best.item.type === 'clock') {
-      budget += clockBonus()
-      steps.push(`clock +${clockBonus()}s (${time.toFixed(1)}s)`)
-    } else if (best.item.type === 'candy') {
-      const rocks = candyHits(scene, best.item, items, 0)
-      for (const rock of rocks) rock.gone = true
-      score += payout('candy', 0, false)
-      steps.push(`candy cleared ${rocks.length} (${time.toFixed(1)}s) score ${score}`)
-    } else {
-      score += payout(best.item.type, best.item.rolled, false)
-      steps.push(`${best.item.type} +${payout(best.item.type, best.item.rolled, false)} (${time.toFixed(1)}s) score ${score}`)
-    }
-  }
-
-  return { score, time, budget, steps }
+  return simulateLevel(level)
 }
 
 export function summarize(): string {
@@ -125,16 +61,23 @@ export function summarize(): string {
     lines.push('LAYOUT OK')
   }
   let failed = problems.length > 0
+  let cumulative = 0
+  const sims = LEVELS.map((_, index) => simulate(index))
   LEVELS.forEach((level, i) => {
-    const sim = simulate(i)
+    cumulative += level.target
+    const sim = sims[i]
     const timeBad = sim.time > level.time
     const scoreBad = sim.score < level.target
-    if (timeBad || scoreBad) failed = true
-    const flag = timeBad || scoreBad ? 'FAIL' : 'OK'
+    const next = LEVELS[i + 1]
+    const surplus = sim.score - level.target
+    const carryBad = Boolean(next && next.target <= surplus)
+    if (timeBad || scoreBad || carryBad) failed = true
+    const flag = timeBad || scoreBad || carryBad ? 'FAIL' : 'OK'
     lines.push(
-      `${flag} L${i + 1} ${level.name} sim ${sim.score}/${level.target} in ${sim.time.toFixed(1)}s / ${level.time}s (budget after clocks ${sim.budget})`,
+      `${flag} L${i + 1} ${level.name} sim ${sim.score}/need ${level.target} (total ${cumulative}) in ${sim.time.toFixed(1)}s / ${level.time}s (budget after clocks ${sim.budget})`,
     )
-    if (timeBad || scoreBad) lines.push(`  ${sim.steps.join(' | ')}`)
+    if (timeBad || scoreBad || carryBad) lines.push(`  ${sim.steps.join(' | ')}`)
+    if (carryBad) lines.push(`  full clear surplus ${surplus} already covers next need ${next?.target}`)
   })
   if (failed) lines.unshift('BALANCE FAIL')
   else lines.unshift('BALANCE OK')
